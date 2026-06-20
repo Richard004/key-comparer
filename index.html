@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyComparer • Compare API Keys & Addresses</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        
+        :root {
+            --font-sans: 'Inter', system_ui, sans-serif;
+            --font-display: 'Space Grotesk', 'Inter', sans-serif;
+        }
+        
+        body {
+            font-family: var(--font-sans);
+        }
+        
+        .font-display {
+            font-family: var(--font-display);
+        }
+
+        .key-input {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .char {
+            display: inline-block;
+            padding: 1px 3px;
+            border-radius: 3px;
+            margin: 0 1px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 14px;
+            transition: all 0.1s ease;
+        }
+        
+        .char.match {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        
+        .char.diff {
+            background-color: #fee2e2;
+            color: #991b1b;
+            font-weight: 600;
+        }
+        
+        .char.index {
+            font-size: 10px;
+            color: #64748b;
+            padding: 0 2px;
+        }
+
+        .result-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .diff-row {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 13px;
+        }
+
+        .section-header {
+            font-family: var(--font-display);
+            letter-spacing: -0.025em;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <div class="max-w-5xl mx-auto px-6 py-10">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-x-3">
+                <div class="w-11 h-11 bg-white rounded-2xl flex items-center justify-center shadow-inner">
+                    <i class="fa-solid fa-key text-zinc-900 text-3xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-4xl font-semibold tracking-tighter section-header">KeyComparer</h1>
+                    <p class="text-zinc-400 text-sm">Compare API keys & wallet addresses character by character</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-x-2 text-sm">
+                <div class="px-3 py-1.5 bg-zinc-900 rounded-2xl flex items-center gap-x-2 text-zinc-400">
+                    <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                    <span class="font-medium">Private • No data sent</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            
+            <!-- Input Section -->
+            <div class="lg:col-span-3 space-y-6">
+                
+                <!-- Key A -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-x-2">
+                            <div class="w-8 h-8 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-key text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold">Key / Address A</div>
+                                <div class="text-xs text-zinc-500">First source</div>
+                            </div>
+                        </div>
+                        <button onclick="copyToClipboard('keyA')" 
+                                class="flex items-center gap-x-1.5 px-3 py-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 transition-colors rounded-2xl px-3.5">
+                            <i class="fa-solid fa-copy text-xs"></i>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                    <textarea id="keyA" 
+                              class="key-input w-full h-28 bg-zinc-950 border border-zinc-800 focus:border-emerald-500/50 rounded-2xl p-4 resize-y focus:outline-none placeholder:text-zinc-600"
+                              placeholder="Paste first API key or wallet address here..."></textarea>
+                    <div class="flex justify-between items-center mt-2 text-xs">
+                        <div id="lenA" class="text-zinc-500 font-mono">0 characters</div>
+                        <button onclick="clearField('keyA')" 
+                                class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs flex items-center gap-x-1">
+                            <i class="fa-solid fa-times text-xs"></i>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Key B -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-x-2">
+                            <div class="w-8 h-8 bg-rose-500/10 text-rose-400 rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-key text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold">Key / Address B</div>
+                                <div class="text-xs text-zinc-500">Second source</div>
+                            </div>
+                        </div>
+                        <button onclick="copyToClipboard('keyB')" 
+                                class="flex items-center gap-x-1.5 px-3 py-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 transition-colors rounded-2xl px-3.5">
+                            <i class="fa-solid fa-copy text-xs"></i>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                    <textarea id="keyB" 
+                              class="key-input w-full h-28 bg-zinc-950 border border-zinc-800 focus:border-rose-500/50 rounded-2xl p-4 resize-y focus:outline-none placeholder:text-zinc-600"
+                              placeholder="Paste second API key or wallet address here..."></textarea>
+                    <div class="flex justify-between items-center mt-2 text-xs">
+                        <div id="lenB" class="text-zinc-500 font-mono">0 characters</div>
+                        <button onclick="clearField('keyB')" 
+                                class="text-zinc-500 hover:text-zinc-300 transition-colors text-xs flex items-center gap-x-1">
+                            <i class="fa-solid fa-times text-xs"></i>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-5">
+                    <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+                        <label class="flex items-center gap-x-2 cursor-pointer">
+                            <input type="checkbox" id="caseSensitive" checked 
+                                   class="w-4 h-4 accent-white bg-zinc-800 border-zinc-700 rounded">
+                            <span class="text-zinc-300">Case sensitive</span>
+                        </label>
+                        
+                        <label class="flex items-center gap-x-2 cursor-pointer">
+                            <input type="checkbox" id="trimWhitespace" checked 
+                                   class="w-4 h-4 accent-white bg-zinc-800 border-zinc-700 rounded">
+                            <span class="text-zinc-300">Trim whitespace</span>
+                        </label>
+
+                        <label class="flex items-center gap-x-2 cursor-pointer">
+                            <input type="checkbox" id="autoCompare" checked 
+                                   class="w-4 h-4 accent-white bg-zinc-800 border-zinc-700 rounded">
+                            <span class="text-zinc-300">Auto-compare while typing</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Section -->
+            <div class="lg:col-span-2">
+                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 h-full flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="font-semibold flex items-center gap-x-2">
+                            <i class="fa-solid fa-chart-bar text-emerald-400"></i>
+                            <span>Comparison Result</span>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div id="statusCard" 
+                         class="result-card flex-1 flex flex-col items-center justify-center text-center border border-zinc-800 rounded-2xl p-8 bg-zinc-950 min-h-[220px]">
+                        <div id="statusIcon" class="text-6xl mb-4 text-zinc-600">
+                            <i class="fa-solid fa-question"></i>
+                        </div>
+                        <div id="statusText" class="text-2xl font-semibold text-zinc-400 tracking-tight">
+                            Paste both keys to compare
+                        </div>
+                        <div id="statusSubtext" class="text-sm text-zinc-500 mt-1 max-w-[220px]">
+                            They will be compared character by character
+                        </div>
+                    </div>
+
+                    <!-- Diff Details -->
+                    <div id="diffSection" class="hidden mt-4">
+                        <div class="flex items-center justify-between mb-2 px-1">
+                            <div class="text-sm font-medium text-zinc-400">Differences found</div>
+                            <div id="diffCount" class="text-xs font-mono bg-zinc-800 px-2.5 py-0.5 rounded-2xl text-zinc-400"></div>
+                        </div>
+                        
+                        <div id="diffList" 
+                             class="max-h-[180px] overflow-auto text-sm border border-zinc-800 rounded-2xl bg-zinc-950 p-3 space-y-1 font-mono text-xs">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Character Comparison View -->
+        <div id="charComparison" class="hidden mt-6 bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="font-semibold">Character-by-character view</div>
+                    <div class="text-xs text-zinc-500">Green = match • Red = difference</div>
+                </div>
+                <button onclick="showFullDiffModal()" 
+                        class="text-xs flex items-center gap-x-1.5 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 transition-colors rounded-2xl text-zinc-300">
+                    <i class="fa-solid fa-expand text-xs"></i>
+                    <span>Expand view</span>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Side A -->
+                <div>
+                    <div class="flex items-center gap-x-2 mb-2 text-sm">
+                        <div class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-2xl text-xs font-medium">A</div>
+                        <span class="text-zinc-400 text-xs">Key A</span>
+                    </div>
+                    <div id="charViewA" 
+                         class="key-input bg-zinc-950 border border-zinc-800 rounded-2xl p-4 text-sm leading-relaxed min-h-[120px] overflow-auto">
+                    </div>
+                </div>
+                
+                <!-- Side B -->
+                <div>
+                    <div class="flex items-center gap-x-2 mb-2 text-sm">
+                        <div class="px-2.5 py-1 bg-rose-500/10 text-rose-400 rounded-2xl text-xs font-medium">B</div>
+                        <span class="text-zinc-400 text-xs">Key B</span>
+                    </div>
+                    <div id="charViewB" 
+                         class="key-input bg-zinc-950 border border-zinc-800 rounded-2xl p-4 text-sm leading-relaxed min-h-[120px] overflow-auto">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer actions -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mt-8">
+            <div class="flex items-center gap-x-3">
+                <button onclick="compareKeys()" 
+                        class="px-8 py-3.5 bg-white hover:bg-zinc-100 active:bg-zinc-200 transition-all text-zinc-900 font-semibold rounded-3xl flex items-center gap-x-2 shadow-lg shadow-white/5">
+                    <i class="fa-solid fa-sync-alt"></i>
+                    <span>Compare Now</span>
+                </button>
+                
+                <button onclick="resetAll()" 
+                        class="px-5 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-sm font-medium rounded-3xl flex items-center gap-x-2 transition-colors">
+                    <i class="fa-solid fa-undo text-xs"></i>
+                    <span>Reset</span>
+                </button>
+            </div>
+            
+            <div class="text-xs text-zinc-500 flex items-center gap-x-1.5">
+                <i class="fa-solid fa-info-circle"></i>
+                <span>All comparison happens locally in your browser. Nothing is sent anywhere.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Diff Modal -->
+    <div id="diffModal" onclick="hideDiffModal()" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="bg-zinc-900 border border-zinc-700 rounded-3xl max-w-4xl w-full max-h-[85vh] flex flex-col">
+            
+            <div class="flex items-center justify-between p-6 border-b border-zinc-800">
+                <div class="font-semibold text-xl">Full character comparison</div>
+                <button onclick="hideDiffModal()" class="text-zinc-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-auto p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <div class="flex items-center gap-x-2 mb-3">
+                            <div class="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-2xl text-sm font-medium">Key A</div>
+                        </div>
+                        <div id="modalCharViewA" class="key-input bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-sm leading-relaxed min-h-[300px]">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-x-2 mb-3">
+                            <div class="px-3 py-1 bg-rose-500/10 text-rose-400 rounded-2xl text-sm font-medium">Key B</div>
+                        </div>
+                        <div id="modalCharViewB" class="key-input bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-sm leading-relaxed min-h-[300px]">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6 border-t border-zinc-800 flex justify-end">
+                <button onclick="hideDiffModal()" 
+                        class="px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm font-medium transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script
+        function initializeTailwind() {
+            document.documentElement.style.setProperty('--accent', '#22c55e');
+        }
+
+        // Update character counts
+        function updateCharCount(id) {
+            const textarea = document.getElementById(id);
+            const countEl = document.getElementById(id === 'keyA' ? 'lenA' : 'lenB');
+            
+            if (!textarea || !countEl) return;
+            
+            let text = textarea.value;
+            const trim = document.getElementById('trimWhitespace').checked;
+            
+            if (trim) {
+                text = text.trim();
+            }
+            
+            countEl.textContent = `${text.length} characters`;
+        }
+
+        // Auto compare setup
+        function setupAutoCompare() {
+            const keyA = document.getElementById('keyA');
+            const keyB = document.getElementById('keyB');
+            const autoCompare = document.getElementById('autoCompare');
+            
+            const handler = () => {
+                if (autoCompare.checked) {
+                    // Debounce slightly
+                    clearTimeout(window.compareTimeout);
+                    window.compareTimeout = setTimeout(() => {
+                        compareKeys(true);
+                    }, 350);
+                }
+            };
+            
+            keyA.addEventListener('input', handler);
+            keyB.addEventListener('input', handler);
+            
+            // Also update char counts
+            keyA.addEventListener('input', () => updateCharCount('keyA'));
+            keyB.addEventListener('input', () => updateCharCount('keyB'));
+            
+            // Initial counts
+            updateCharCount('keyA');
+            updateCharCount('keyB');
+        }
+
+        // Main comparison function
+        function compareKeys(silent = false) {
+            const keyAEl = document.getElementById('keyA');
+            const keyBEl = document.getElementById('keyB');
+            
+            let a = keyAEl.value;
+            let b = keyBEl.value;
+            
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            const trim = document.getElementById('trimWhitespace').checked;
+            
+            if (trim) {
+                a = a.trim();
+                b = b.trim();
+            }
+            
+            if (!a && !b) {
+                resetResultUI();
+                return;
+            }
+            
+            // Perform comparison
+            const result = performComparison(a, b, caseSensitive);
+            
+            // Update UI
+            updateResultUI(result, a, b);
+            
+            if (!silent) {
+                // Scroll to result on manual compare
+                document.getElementById('statusCard').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }
+        }
+
+        function performComparison(strA, strB, caseSensitive) {
+            const originalA = strA;
+            const originalB = strB;
+            
+            if (!caseSensitive) {
+                strA = strA.toLowerCase();
+                strB = strB.toLowerCase();
+            }
+            
+            const lenA = strA.length;
+            const lenB = strB.length;
+            const maxLen = Math.max(lenA, lenB);
+            
+            let differences = [];
+            let matchCount = 0;
+            
+            for (let i = 0; i < maxLen; i++) {
+                const charA = i < lenA ? strA[i] : null;
+                const charB = i < lenB ? strB[i] : null;
+                
+                const isMatch = charA === charB;
+                
+                if (isMatch) {
+                    matchCount++;
+                } else {
+                    differences.push({
+                        index: i + 1,           // 1-based
+                        charA: charA !== null ? originalA[i] : '∅',
+                        charB: charB !== null ? originalB[i] : '∅',
+                        rawCharA: charA,
+                        rawCharB: charB
+                    });
+                }
+            }
+            
+            const identical = differences.length === 0 && lenA === lenB;
+            const similarity = maxLen > 0 ? Math.round((matchCount / maxLen) * 100) : 0;
+            
+            return {
+                identical,
+                differences,
+                matchCount,
+                maxLen,
+                similarity,
+                lenA,
+                lenB,
+                originalA,
+                originalB
+            };
+        }
+
+        function updateResultUI(result, strA, strB) {
+            const statusCard = document.getElementById('statusCard');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            const statusSubtext = document.getElementById('statusSubtext');
+            const diffSection = document.getElementById('diffSection');
+            const diffList = document.getElementById('diffList');
+            const diffCount = document.getElementById('diffCount');
+            const charComparison = document.getElementById('charComparison');
+            
+            // Reset previous classes
+            statusCard.className = 'result-card flex-1 flex flex-col items-center justify-center text-center border rounded-2xl p-8 bg-zinc-950 min-h-[220px]';
+            
+            if (result.identical) {
+                // IDENTICAL
+                statusCard.classList.add('border-emerald-500/30', 'bg-emerald-950/30');
+                statusIcon.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-400"></i>';
+                statusIcon.className = 'text-7xl mb-4';
+                statusText.innerHTML = '✅ IDENTICAL';
+                statusText.className = 'text-3xl font-semibold text-emerald-400 tracking-tight';
+                statusSubtext.innerHTML = `Both strings match perfectly (${result.lenA} characters)`;
+                statusSubtext.className = 'text-emerald-400/70 text-sm mt-1';
+                
+                diffSection.classList.add('hidden');
+                charComparison.classList.add('hidden');
+            } else {
+                // DIFFERENT
+                statusCard.classList.add('border-rose-500/30', 'bg-rose-950/30');
+                statusIcon.innerHTML = '<i class="fa-solid fa-times-circle text-rose-400"></i>';
+                statusIcon.className = 'text-7xl mb-4';
+                statusText.innerHTML = '❌ DIFFERENT';
+                statusText.className = 'text-3xl font-semibold text-rose-400 tracking-tight';
+                
+                const diffText = result.differences.length === 1 
+                    ? '1 difference found' 
+                    : `${result.differences.length} differences found`;
+                
+                statusSubtext.innerHTML = `${diffText} • ${result.similarity}% similar`;
+                statusSubtext.className = 'text-rose-400/70 text-sm mt-1';
+                
+                // Show diff list
+                diffSection.classList.remove('hidden');
+                diffCount.textContent = `${result.differences.length} diffs`;
+                
+                diffList.innerHTML = '';
+                
+                result.differences.slice(0, 12).forEach(diff => {
+                    const row = document.createElement('div');
+                    row.className = `diff-row px-3 py-1.5 flex items-center justify-between rounded-xl hover:bg-zinc-900 transition-colors`;
+                    
+                    const pos = document.createElement('div');
+                    pos.className = 'font-mono text-rose-400 w-12';
+                    pos.textContent = `#${diff.index}`;
+                    
+                    const content = document.createElement('div');
+                    content.className = 'flex-1 flex items-center gap-x-3 text-xs';
+                    
+                    content.innerHTML = `
+                        <div class="flex items-center gap-x-1.5">
+                            <span class="text-emerald-400/70">A:</span> 
+                            <span class="font-semibold px-1.5 py-px bg-emerald-500/10 text-emerald-300 rounded">${diff.charA}</span>
+                        </div>
+                        <div class="flex items-center gap-x-1.5">
+                            <span class="text-rose-400/70">B:</span> 
+                            <span class="font-semibold px-1.5 py-px bg-rose-500/10 text-rose-300 rounded">${diff.charB}</span>
+                        </div>
+                    `;
+                    
+                    row.appendChild(pos);
+                    row.appendChild(content);
+                    diffList.appendChild(row);
+                });
+                
+                if (result.differences.length > 12) {
+                    const more = document.createElement('div');
+                    more.className = 'text-center text-xs text-zinc-500 py-2';
+                    more.textContent = `+ ${result.differences.length - 12} more differences...`;
+                    diffList.appendChild(more);
+                }
+                
+                // Show character comparison view
+                renderCharComparison(result, strA, strB);
+                charComparison.classList.remove('hidden');
+            }
+        }
+
+        function renderCharComparison(result, strA, strB) {
+            const viewA = document.getElementById('charViewA');
+            const viewB = document.getElementById('charViewB');
+            
+            viewA.innerHTML = '';
+            viewB.innerHTML = '';
+            
+            const maxLen = Math.max(strA.length, strB.length);
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            
+            for (let i = 0; i < maxLen; i++) {
+                const charA = i < strA.length ? strA[i] : null;
+                const charB = i < strB.length ? strB[i] : null;
+                
+                const lowerA = caseSensitive ? charA : (charA ? charA.toLowerCase() : null);
+                const lowerB = caseSensitive ? charB : (charB ? charB.toLowerCase() : null);
+                
+                const isMatch = lowerA === lowerB;
+                
+                // For A
+                const spanA = document.createElement('span');
+                spanA.className = `char ${isMatch ? 'match' : 'diff'}`;
+                spanA.textContent = charA !== null ? charA : '∅';
+                if (!isMatch) spanA.title = `Position ${i+1}: differs from B`;
+                viewA.appendChild(spanA);
+                
+                // For B
+                const spanB = document.createElement('span');
+                spanB.className = `char ${isMatch ? 'match' : 'diff'}`;
+                spanB.textContent = charB !== null ? charB : '∅';
+                if (!isMatch) spanB.title = `Position ${i+1}: differs from A`;
+                viewB.appendChild(spanB);
+            }
+        }
+
+        function showFullDiffModal() {
+            const modal = document.getElementById('diffModal');
+            const modalA = document.getElementById('modalCharViewA');
+            const modalB = document.getElementById('modalCharViewB');
+            
+            const keyA = document.getElementById('keyA').value;
+            const keyB = document.getElementById('keyB').value;
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            const trim = document.getElementById('trimWhitespace').checked;
+            
+            let a = keyA;
+            let b = keyB;
+            
+            if (trim) {
+                a = a.trim();
+                b = b.trim();
+            }
+            
+            modalA.innerHTML = '';
+            modalB.innerHTML = '';
+            
+            const maxLen = Math.max(a.length, b.length);
+            
+            for (let i = 0; i < maxLen; i++) {
+                const charA = i < a.length ? a[i] : null;
+                const charB = i < b.length ? b[i] : null;
+                
+                const lowerA = caseSensitive ? charA : (charA ? charA.toLowerCase() : null);
+                const lowerB = caseSensitive ? charB : (charB ? charB.toLowerCase() : null);
+                
+                const isMatch = lowerA === lowerB;
+                
+                const spanA = document.createElement('span');
+                spanA.className = `char ${isMatch ? 'match' : 'diff'} text-base`;
+                spanA.textContent = charA !== null ? charA : '∅';
+                modalA.appendChild(spanA);
+                
+                const spanB = document.createElement('span');
+                spanB.className = `char ${isMatch ? 'match' : 'diff'} text-base`;
+                spanB.textContent = charB !== null ? charB : '∅';
+                modalB.appendChild(spanB);
+            }
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideDiffModal() {
+            const modal = document.getElementById('diffModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function copyToClipboard(fieldId) {
+            const textarea = document.getElementById(fieldId);
+            if (!textarea) return;
+            
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                const originalText = event.currentTarget ? event.currentTarget.innerHTML : '';
+                
+                // Show toast
+                const toast = document.createElement('div');
+                toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-5 py-2.5 rounded-3xl flex items-center gap-x-2 shadow-xl border border-zinc-700`;
+                toast.innerHTML = `
+                    <i class="fa-solid fa-check text-emerald-400"></i>
+                    <span>Copied to clipboard</span>
+                `;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.transition = 'all 0.2s ease';
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 200);
+                }, 1400);
+            }).catch(() => {
+                // Fallback
+                textarea.select();
+                document.execCommand('copy');
+            });
+        }
+
+        function clearField(fieldId) {
+            const el = document.getElementById(fieldId);
+            if (el) {
+                el.value = '';
+                updateCharCount(fieldId);
+                
+                // If auto-compare, re-run comparison
+                const auto = document.getElementById('autoCompare');
+                if (auto && auto.checked) {
+                    compareKeys(true);
+                } else {
+                    resetResultUI();
+                }
+            }
+        }
+
+        function resetResultUI() {
+            const statusCard = document.getElementById('statusCard');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            const statusSubtext = document.getElementById('statusSubtext');
+            const diffSection = document.getElementById('diffSection');
+            const charComparison = document.getElementById('charComparison');
+            
+            statusCard.className = 'result-card flex-1 flex flex-col items-center justify-center text-center border border-zinc-800 rounded-2xl p-8 bg-zinc-950 min-h-[220px]';
+            statusIcon.innerHTML = '<i class="fa-solid fa-question"></i>';
+            statusIcon.className = 'text-6xl mb-4 text-zinc-600';
+            statusText.innerHTML = 'Paste both keys to compare';
+            statusText.className = 'text-2xl font-semibold text-zinc-400 tracking-tight';
+            statusSubtext.innerHTML = 'They will be compared character by character';
+            statusSubtext.className = 'text-sm text-zinc-500 mt-1 max-w-[220px]';
+            
+            diffSection.classList.add('hidden');
+            charComparison.classList.add('hidden');
+        }
+
+        function resetAll() {
+            document.getElementById('keyA').value = '';
+            document.getElementById('keyB').value = '';
+            updateCharCount('keyA');
+            updateCharCount('keyB');
+            resetResultUI();
+        }
+
+        // Keyboard shortcuts
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                if (e.metaKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    compareKeys();
+                }
+                
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('diffModal');
+                    if (!modal.classList.contains('hidden')) {
+                        hideDiffModal();
+                    } else {
+                        resetAll();
+                    }
+                }
+            });
+            
+            // Add hint in console for power users
+            console.log('%c[KeyComparer] Tip: Press Cmd/Ctrl + Enter to compare', 'color:#52525b');
+        }
+
+        // Initialize everything
+        function init() {
+            initializeTailwind();
+            setupAutoCompare();
+            setupKeyboardShortcuts();
+            
+            // Set initial state
+            resetResultUI();
+            
+            // Make compare function globally available for debugging
+            window.KeyComparer = { compareKeys, resetAll };
+            
+            console.log('%c[KeyComparer] Ready — all comparison is 100% local.', 'color:#3f3f46');
+        }
+
+        // Boot app
+        window.onload = init;
+    </script>
+</body>
+</html>
